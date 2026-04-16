@@ -33,8 +33,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Sessiya tugagandan keyin user ni yangilash uchun
+  const refreshUser = async () => {
+    try {
+      const { data } = await getProfile();
+      setUser(data);
+    } catch {}
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, loginUser, logoutUser }}>
+    <AuthContext.Provider value={{ user, loading, loginUser, logoutUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

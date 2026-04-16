@@ -28,11 +28,13 @@ const TopicManagement = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedPart) fetchTopics();
+    fetchTopics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPart]);
 
   useEffect(() => {
-    if (selectedTopic) fetchQuestions();
+    fetchQuestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
   const fetchTopics = async () => {

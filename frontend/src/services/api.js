@@ -27,6 +27,8 @@ export const getQuestions = (topicId) => API.get(`/speaking/questions/${topicId}
 
 // AI
 export const getAIFeedback = (data) => API.post('/ai/feedback', data);
+export const saveSession = (data) => API.post('/ai/save-session', data);
+export const getSessionHistory = () => API.get('/ai/session-history');
 
 // Admin - Topics & Questions
 export const addNewTopic = (data) => API.post('/speaking/add-topic', data);
@@ -38,5 +40,13 @@ export const deleteQuestion = (questionId) => API.delete(`/speaking/question/${q
 export const getAllUsers = () => API.get('/users');
 export const updateUserRole = (userId, role) => API.put(`/users/${userId}/role`, { role });
 export const deleteUser = (userId) => API.delete(`/users/${userId}`);
+
+// Leaderboard & Limits
+export const getLeaderboard = (type) => API.get(`/leaderboard/${type}`);
+export const getMyLimits = () => API.get('/leaderboard/me/limits');
+
+export const verifyEmail = (data) => API.post('/auth/verify-email', data);
+export const forgotPassword = (data) => API.post('/auth/forgot-password', data);
+export const resetPassword = (data) => API.post('/auth/reset-password', data);
 
 export default API;

@@ -55,6 +55,41 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+// Tugallangan topiclar
+  completedTopics: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Topic',
+    },
+  ],
+  // Kunlik limit
+  dailyUsage: {
+    date: { type: Date, default: null },
+    vocabularyCount: { type: Number, default: 0 },
+    speakingCount: { type: Number, default: 0 },
+  },
+  // Email verification
+isVerified: {
+  type: Boolean,
+  default: false,
+},
+verificationCode: {
+  type: String,
+  default: null,
+},
+verificationCodeExpires: {
+  type: Date,
+  default: null,
+},
+// Password reset
+resetPasswordCode: {
+  type: String,
+  default: null,
+},
+resetPasswordCodeExpires: {
+  type: Date,
+  default: null,
+},
   createdAt: {
     type: Date,
     default: Date.now,

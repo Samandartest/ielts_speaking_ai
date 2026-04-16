@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { incrementLimit } = require('../middleware/limitCheck');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -33,13 +34,12 @@ const getVocabulary = async (req, res) => {
     IMPORTANT: Return ONLY the JSON array, no other text.`;
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    let text = response.text();
-
-    // JSON ni tozalash (agar markdown code block ichida bo'lsa)
+    let text = result.response.text();
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
     const vocabulary = JSON.parse(text);
+
+    // Faqat muvaffaqiyatli bo'lganda limit oshirish
+    await incrementLimit(req.user._id, 'vocabulary');
 
     res.json({ topic, vocabulary });
   } catch (error) {
