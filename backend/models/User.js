@@ -94,6 +94,14 @@ resetPasswordCodeExpires: {
     type: Date,
     default: Date.now,
   },
+  isPremium: {
+  type: Boolean,
+  default: false,
+},
+premiumExpiresAt: {
+  type: Date,
+  default: null,
+},
 });
 
 userSchema.pre('save', async function (next) {

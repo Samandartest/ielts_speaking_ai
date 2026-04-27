@@ -37,6 +37,8 @@ app.use('/api/speaking', require('./routes/speaking'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/mock-exam', require('./routes/mockExam'));
+app.use('/api/payment', require('./routes/payment'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'IELTS Speaking AI API ishlayapti!' });

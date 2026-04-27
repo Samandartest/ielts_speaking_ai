@@ -61,6 +61,42 @@ const XpPopup = ({ data, onClose }) => {
   );
 };
 
+const PronunciationBar = ({ score }) => {
+  if (score === null || score === undefined) return null;
+  const color = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-400' : 'bg-red-500';
+  const textColor = score >= 80
+    ? 'text-green-600 dark:text-green-400'
+    : score >= 60
+    ? 'text-yellow-600 dark:text-yellow-400'
+    : 'text-red-600 dark:text-red-400';
+  const bgColor = score >= 80
+    ? 'bg-green-50 dark:bg-green-900/20'
+    : score >= 60
+    ? 'bg-yellow-50 dark:bg-yellow-900/20'
+    : 'bg-red-50 dark:bg-red-900/20';
+
+  return (
+    <div className={`flex items-center gap-3 mb-4 p-3 rounded-lg ${bgColor}`}>
+      <span className="text-2xl">🗣️</span>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+          Talaffuz:{' '}
+          <span className={textColor}>{score}%</span>
+        </p>
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
+          <div
+            className={`${color} h-1.5 rounded-full transition-all duration-500`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          {score >= 80 ? "Ajoyib talaffuz! ✓" : score >= 60 ? "Yaxshi, lekin yaxshilanish mumkin" : "Ko'proq mashq qiling"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const SpeakingSession = () => {
   const { topicId } = useParams();
   const location = useLocation();
@@ -73,6 +109,7 @@ const SpeakingSession = () => {
   const [started, setStarted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
+  const [pronunciationScore, setPronunciationScore] = useState(null); // ← YANGI
   const [feedback, setFeedback] = useState(null);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
@@ -112,13 +149,29 @@ const SpeakingSession = () => {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+
       recognition.onresult = (event) => {
         let transcript = '';
+        let totalConfidence = 0;
+        let finalCount = 0;
+
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            totalConfidence += event.results[i][0].confidence;
+            finalCount++;
+          }
         }
+
         setUserAnswer(transcript);
+
+        // Confidence score — faqat final resultlarda keladi
+        if (finalCount > 0) {
+          const avgConfidence = totalConfidence / finalCount;
+          setPronunciationScore(Math.round(avgConfidence * 100));
+        }
       };
+
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
       recognitionRef.current = recognition;
@@ -150,6 +203,7 @@ const SpeakingSession = () => {
             setTimeout(() => {
               if (recognitionRef.current) {
                 setUserAnswer('');
+                setPronunciationScore(null);
                 setFeedback(null);
                 try { recognitionRef.current.start(); setIsListening(true); } catch {}
               }
@@ -181,6 +235,7 @@ const SpeakingSession = () => {
     setSessionHistory([]);
     setFeedback(null);
     setUserAnswer('');
+    setPronunciationScore(null);
     if (questions.length > 0) {
       await speak(questions[0].text);
       if (isPart2) startTimer('prep');
@@ -190,6 +245,7 @@ const SpeakingSession = () => {
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
       setUserAnswer('');
+      setPronunciationScore(null); // ← reset
       setFeedback(null);
       try {
         recognitionRef.current.start();
@@ -207,16 +263,31 @@ const SpeakingSession = () => {
     clearInterval(timerRef.current);
     setTimerPhase(null);
     if (!userAnswer.trim()) return;
+
     setLoadingFeedback(true);
     setFeedback(null);
+
     try {
-      const { data } = await getAIFeedback({ question: questions[currentIndex].text, userAnswer, partNumber });
-      setFeedback(data);
+      const { data } = await getAIFeedback({
+        question: questions[currentIndex].text,
+        userAnswer,
+        partNumber,
+      });
+
+      // pronunciationScore ni feedback ga birlashtirамiz
+      const feedbackWithPronunciation = {
+        ...data,
+        pronunciationScore, // ← speech API dan kelgan confidence
+      };
+
+      setFeedback(feedbackWithPronunciation);
       setSessionHistory((prev) => [...prev, {
         question: questions[currentIndex].text,
         answer: userAnswer,
-        feedback: data,
+        feedback: feedbackWithPronunciation,
+        pronunciationScore,
       }]);
+
       await speak(`Your estimated score is ${data.score}. Here's an improved version: ${data.improvedVersion}`);
     } catch (err) {
       if (err.response?.status === 429) {
@@ -231,6 +302,7 @@ const SpeakingSession = () => {
     if (nextIdx < questions.length) {
       setCurrentIndex(nextIdx);
       setUserAnswer('');
+      setPronunciationScore(null); // ← reset
       setFeedback(null);
       setTimerPhase(null);
       clearInterval(timerRef.current);
@@ -245,6 +317,7 @@ const SpeakingSession = () => {
     setSessionEnded(true);
     speechSynthesis.cancel();
     clearInterval(timerRef.current);
+
     const answersToSave = sessionHistory.map((item) => ({
       question: item.question,
       userAnswer: item.answer,
@@ -252,6 +325,7 @@ const SpeakingSession = () => {
       feedback: item.feedback.feedback,
       improvedVersion: item.feedback.improvedVersion,
     }));
+
     if (answersToSave.length === 0) return;
     try {
       const { data } = await saveSession({ topicId, partNumber, answers: answersToSave });
@@ -266,6 +340,7 @@ const SpeakingSession = () => {
     if (questions[currentIndex]) await speak(questions[currentIndex].text);
   };
 
+  // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950">
@@ -274,6 +349,7 @@ const SpeakingSession = () => {
     );
   }
 
+  // ─── Boshlanmagan ──────────────────────────────────────────────────────────
   if (!started) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-10 transition-colors duration-300">
@@ -319,6 +395,7 @@ const SpeakingSession = () => {
     );
   }
 
+  // ─── Sessiya tugagan ───────────────────────────────────────────────────────
   if (sessionEnded) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-10 transition-colors duration-300">
@@ -348,14 +425,25 @@ const SpeakingSession = () => {
                     <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold px-3 py-1 rounded-full">
                       {item.feedback.score} / 9
                     </span>
+                    {item.pronunciationScore !== null && item.pronunciationScore !== undefined && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        item.pronunciationScore >= 80
+                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                          : item.pronunciationScore >= 60
+                          ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400'
+                          : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+                      }`}>
+                        🗣️ {item.pronunciationScore}%
+                      </span>
+                    )}
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-3 transition-colors">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('speaking.feedbackTitle')}:</p>
                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>💬 <strong>{t('speaking.fluency')}:</strong> {item.feedback.feedback.fluency}</li>
-                      <li>📚 <strong>{t('speaking.vocabulary')}:</strong> {item.feedback.feedback.vocabulary}</li>
-                      <li>✏️ <strong>{t('speaking.grammar')}:</strong> {item.feedback.feedback.grammar}</li>
-                      <li>🗣️ <strong>{t('speaking.pronunciation')}:</strong> {item.feedback.feedback.pronunciation}</li>
+                      <li>💬 <strong>{t('speaking.fluency')}:</strong> {item.feedback.feedback?.fluency}</li>
+                      <li>📚 <strong>{t('speaking.vocabulary')}:</strong> {item.feedback.feedback?.vocabulary}</li>
+                      <li>✏️ <strong>{t('speaking.grammar')}:</strong> {item.feedback.feedback?.grammar}</li>
+                      <li>🗣️ <strong>{t('speaking.pronunciation')}:</strong> {item.feedback.feedback?.pronunciation}</li>
                     </ul>
                   </div>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 transition-colors">
@@ -371,10 +459,12 @@ const SpeakingSession = () => {
     );
   }
 
+  // ─── Aktiv sessiya ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 py-6 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4">
 
+        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <Link to="/speaking" className="text-blue-600 dark:text-blue-400 hover:underline">{t('common.back')}</Link>
           <button onClick={endSession} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm transition-colors">
@@ -382,6 +472,7 @@ const SpeakingSession = () => {
           </button>
         </div>
 
+        {/* Progress */}
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
             <span>{t('common.question')} {currentIndex + 1} / {questions.length}</span>
@@ -395,6 +486,7 @@ const SpeakingSession = () => {
           </div>
         </div>
 
+        {/* Part 2 timer */}
         {isPart2 && timerPhase && (
           <Part2Timer
             phase={timerPhase}
@@ -403,13 +495,16 @@ const SpeakingSession = () => {
           />
         )}
 
+        {/* AI Examiner */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 transition-colors">
           <div className="flex items-start gap-4">
             <div className={`text-4xl ${isSpeaking ? 'animate-bounce' : ''}`}>🤖</div>
             <div className="flex-1">
               <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold mb-1">{t('speaking.aiExaminer')}</p>
               <p className="text-lg text-gray-800 dark:text-white font-medium">{questions[currentIndex]?.text}</p>
-              {isSpeaking && <p className="text-blue-500 dark:text-blue-400 text-sm mt-2 animate-pulse">{t('speaking.speaking')}</p>}
+              {isSpeaking && (
+                <p className="text-blue-500 dark:text-blue-400 text-sm mt-2 animate-pulse">{t('speaking.speaking')}</p>
+              )}
             </div>
             <button
               onClick={repeatQuestion}
@@ -422,6 +517,7 @@ const SpeakingSession = () => {
           </div>
         </div>
 
+        {/* Answer area */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 transition-colors">
           <div className="flex items-start gap-4">
             <div className="text-4xl">🙋</div>
@@ -470,6 +566,7 @@ const SpeakingSession = () => {
           )}
         </div>
 
+        {/* Loading feedback */}
         {loadingFeedback && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 text-center transition-colors">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3" />
@@ -477,14 +574,20 @@ const SpeakingSession = () => {
           </div>
         )}
 
-        {feedback?._limitError ? (
+        {/* Limit error */}
+        {feedback?._limitError && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 mb-6 text-center">
             <div className="text-4xl mb-2">⛔</div>
             <p className="text-red-700 dark:text-red-400 font-semibold">{feedback.message}</p>
           </div>
-        ) : feedback && !loadingFeedback && (
+        )}
+
+        {/* Feedback */}
+        {feedback && !feedback._limitError && !loadingFeedback && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 transition-colors">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">{t('speaking.feedbackTitle')}</h3>
+
+            {/* Ball */}
             <div className="flex items-center gap-3 mb-4">
               <span className="text-gray-600 dark:text-gray-400 font-semibold">{t('speaking.score')}:</span>
               <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
@@ -497,27 +600,55 @@ const SpeakingSession = () => {
                 {feedback.score} / 9
               </span>
             </div>
+
+            {/* Talaffuz baholash */}
+            <PronunciationBar score={feedback.pronunciationScore} />
+
+            {/* Feedback details */}
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-2 transition-colors">
-              <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-200">💬 {t('speaking.fluency')}:</span>{' '}<span className="text-gray-600 dark:text-gray-400">{feedback.feedback.fluency}</span></p>
-              <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-200">📚 {t('speaking.vocabulary')}:</span>{' '}<span className="text-gray-600 dark:text-gray-400">{feedback.feedback.vocabulary}</span></p>
-              <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-200">✏️ {t('speaking.grammar')}:</span>{' '}<span className="text-gray-600 dark:text-gray-400">{feedback.feedback.grammar}</span></p>
-              <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-200">🗣️ {t('speaking.pronunciation')}:</span>{' '}<span className="text-gray-600 dark:text-gray-400">{feedback.feedback.pronunciation}</span></p>
+              <p className="text-sm">
+                <span className="font-semibold text-gray-700 dark:text-gray-200">💬 {t('speaking.fluency')}:</span>{' '}
+                <span className="text-gray-600 dark:text-gray-400">{feedback.feedback?.fluency}</span>
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold text-gray-700 dark:text-gray-200">📚 {t('speaking.vocabulary')}:</span>{' '}
+                <span className="text-gray-600 dark:text-gray-400">{feedback.feedback?.vocabulary}</span>
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold text-gray-700 dark:text-gray-200">✏️ {t('speaking.grammar')}:</span>{' '}
+                <span className="text-gray-600 dark:text-gray-400">{feedback.feedback?.grammar}</span>
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold text-gray-700 dark:text-gray-200">🗣️ {t('speaking.pronunciation')}:</span>{' '}
+                <span className="text-gray-600 dark:text-gray-400">{feedback.feedback?.pronunciation}</span>
+              </p>
             </div>
+
+            {/* Improved version */}
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4 transition-colors">
               <p className="text-sm font-semibold text-green-700 dark:text-green-400 mb-1">{t('speaking.improvedVersion')}:</p>
               <p className="text-green-800 dark:text-green-300 leading-relaxed">"{feedback.improvedVersion}"</p>
             </div>
+
+            {/* Buttons */}
             <div className="flex justify-center gap-4 mt-4">
-              <button onClick={startListening} className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+              <button
+                onClick={startListening}
+                className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
                 {t('speaking.retryBtn')}
               </button>
-              <button onClick={nextQuestion} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold transition-colors">
+              <button
+                onClick={nextQuestion}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+              >
                 {currentIndex + 1 < questions.length ? t('speaking.nextBtn') : t('speaking.finishBtn')}
               </button>
             </div>
           </div>
         )}
 
+        {/* Oldingi savollar */}
         {sessionHistory.length > 0 && (
           <div className="mt-8">
             <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4">
@@ -528,9 +659,14 @@ const SpeakingSession = () => {
                 <details key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition-colors">
                   <summary className="flex justify-between items-center">
                     <span className="text-gray-700 dark:text-gray-300 font-medium">{index + 1}. {item.question}</span>
-                    <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full text-sm">
-                      {item.feedback.score}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {item.pronunciationScore !== null && item.pronunciationScore !== undefined && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">🗣️ {item.pronunciationScore}%</span>
+                      )}
+                      <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full text-sm">
+                        {item.feedback.score}
+                      </span>
+                    </div>
                   </summary>
                   <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
                     <p className="text-sm text-gray-600 dark:text-gray-400">

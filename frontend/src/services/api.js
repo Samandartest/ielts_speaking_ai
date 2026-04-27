@@ -41,6 +41,16 @@ export const getAllUsers = () => API.get('/users');
 export const updateUserRole = (userId, role) => API.put(`/users/${userId}/role`, { role });
 export const deleteUser = (userId) => API.delete(`/users/${userId}`);
 
+// Mock exam
+export const startMockExam = () => API.post('/mock-exam/start');
+export const submitMockPart = (data) => API.post('/mock-exam/submit-part', data);
+export const getMockExamHistory = () => API.get('/mock-exam/history');
+
+// Progress & bashorat
+export const getProgress = () => API.get('/ai/progress');
+
+// Payment
+export const getPaymentStatus = () => API.get('/payment/status');
 // Leaderboard & Limits
 export const getLeaderboard = (type) => API.get(`/leaderboard/${type}`);
 export const getMyLimits = () => API.get('/leaderboard/me/limits');

@@ -15,6 +15,19 @@ const checkLimit = (type) => async (req, res, next) => {
   try {
     if (req.user.role === 'admin') return next();
 
+      // Premium user limitsiz
+    const freshUser = await User.findById(req.user._id);
+    if (freshUser.isPremium) {
+      // Premium muddati tugagan bo'lsa o'chirish
+      if (freshUser.premiumExpiresAt && freshUser.premiumExpiresAt < new Date()) {
+        freshUser.isPremium = false;
+        freshUser.premiumExpiresAt = null;
+        await freshUser.save();
+      } else {
+        return next();
+      }
+    }
+
     const today = getTodayStart();
     const user = await User.findById(req.user._id);
 
