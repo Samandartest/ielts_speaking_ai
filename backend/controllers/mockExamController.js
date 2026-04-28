@@ -1,20 +1,51 @@
 const MockExam = require('../models/MockExam');
 const User = require('../models/User');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { incrementLimit } = require('../middleware/limitCheck');
+const Part = require('../models/Part');
+const Topic = require('../models/Topic');
+const Question = require('../models/Question');
+const { incrementMockExamLimit } = require('../middleware/limitCheck');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const getMockExamQuestions = async (req, res) => {
+  try {
+    const parts = await Part.find().sort({ partNumber: 1 });
+    if (parts.length < 3) {
+      return res.status(400).json({ message: 'Kamida 3 ta part kerak' });
+    }
 
-// Yangi mock exam boshlash
+    const partQuestions = {};
+
+    for (const part of parts) {
+      const topics = await Topic.find({ part: part._id });
+      if (topics.length === 0) continue;
+
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      const questions = await Question.find({ topic: randomTopic._id }).sort({ order: 1 });
+
+      let count;
+      if (part.partNumber === 1) count = 4;
+      else if (part.partNumber === 2) count = 1;
+      else count = 3;
+
+      partQuestions[part.partNumber] = {
+        partId: part._id,
+        partNumber: part.partNumber,
+        title: part.title,
+        topicName: randomTopic.name,
+        questions: questions.slice(0, count),
+      };
+    }
+
+    res.json(partQuestions);
+  } catch (error) {
+    res.status(500).json({ message: 'Xatolik', error: error.message });
+  }
+};
+
 const startMockExam = async (req, res) => {
   try {
-    const existing = await MockExam.findOne({
-      user: req.user._id,
-      status: 'in_progress',
-    });
-    if (existing) {
-      return res.json({ mockExamId: existing._id, message: 'Davom etayotgan exam mavjud' });
-    }
+    // Avvalgi in_progress ni bekor qilish
+    await MockExam.deleteMany({ user: req.user._id, status: 'in_progress' });
+
     const mockExam = await MockExam.create({ user: req.user._id, parts: [] });
     res.status(201).json({ mockExamId: mockExam._id });
   } catch (error) {
@@ -22,7 +53,6 @@ const startMockExam = async (req, res) => {
   }
 };
 
-// Part natijasini saqlash
 const submitPart = async (req, res) => {
   try {
     const { mockExamId, partNumber, answers } = req.body;
@@ -30,7 +60,10 @@ const submitPart = async (req, res) => {
     const mockExam = await MockExam.findOne({ _id: mockExamId, user: req.user._id });
     if (!mockExam) return res.status(404).json({ message: 'Mock exam topilmadi' });
 
-    const avgScore = answers.reduce((s, a) => s + a.score, 0) / answers.length;
+    const validAnswers = answers.filter((a) => a.score > 0);
+    const avgScore = validAnswers.length > 0
+      ? validAnswers.reduce((s, a) => s + a.score, 0) / validAnswers.length
+      : 0;
 
     mockExam.parts.push({
       partNumber,
@@ -38,7 +71,6 @@ const submitPart = async (req, res) => {
       averageScore: Math.round(avgScore * 10) / 10,
     });
 
-    // Barcha 3 part tugagan bo'lsa — yakunlashtirish
     if (mockExam.parts.length >= 3) {
       mockExam.status = 'completed';
       mockExam.completedAt = new Date();
@@ -54,7 +86,8 @@ const submitPart = async (req, res) => {
       user.updateStreak();
       await user.save();
 
-      await incrementLimit(req.user._id, 'speaking');
+      // Haftalik mock limit hisoblash
+      await incrementMockExamLimit(req.user._id);
     }
 
     await mockExam.save();
@@ -71,7 +104,26 @@ const submitPart = async (req, res) => {
   }
 };
 
-// Mock exam tarixini olish
+// Imtihonni yarim yo'lda bekor qilish
+const cancelMockExam = async (req, res) => {
+  try {
+    const { mockExamId } = req.body;
+    const result = await MockExam.findOneAndDelete({
+      _id: mockExamId,
+      user: req.user._id,
+      status: 'in_progress',
+    });
+
+    if (!result) {
+      return res.status(404).json({ message: 'Aktiv mock exam topilmadi' });
+    }
+
+    res.json({ message: 'Mock exam bekor qilindi' });
+  } catch (error) {
+    res.status(500).json({ message: 'Xatolik', error: error.message });
+  }
+};
+
 const getMockExamHistory = async (req, res) => {
   try {
     const exams = await MockExam.find({ user: req.user._id, status: 'completed' })
@@ -83,4 +135,4 @@ const getMockExamHistory = async (req, res) => {
   }
 };
 
-module.exports = { startMockExam, submitPart, getMockExamHistory };
+module.exports = { getMockExamQuestions, startMockExam, submitPart, cancelMockExam, getMockExamHistory };

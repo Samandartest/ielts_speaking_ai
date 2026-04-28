@@ -67,4 +67,30 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, updateUserRole, deleteUser };
+// User premium holatini boshqarish (admin)
+const setUserPremium = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isPremium } = req.body;
+
+    const updateData = { isPremium };
+    if (isPremium) {
+      updateData.premiumExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 kun
+    } else {
+      updateData.premiumExpiresAt = null;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updateData, { new: true }).select('-password');
+
+    if (!user) return res.status(404).json({ message: 'User topilmadi' });
+
+    res.json({
+      message: `${user.name} ${isPremium ? 'Premium qilindi' : 'Premium bekor qilindi'}`,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server xatosi' });
+  }
+};
+
+module.exports = { getAllUsers, updateUserRole, deleteUser, setUserPremium };

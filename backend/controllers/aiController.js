@@ -168,7 +168,11 @@ const getProgress = async (req, res) => {
     // ─── Bashorat algoritmi ─────────────────────────────────────────────
     const prediction = calculatePrediction(sessions);
 
-    res.json({ sessions: weekly, prediction, totalSessions: sessions.length });
+    // User targetBand ini olish
+    const userData = await User.findById(req.user._id).select('targetBand');
+    const targetBand = userData?.targetBand || 6.5;
+
+    res.json({ sessions: weekly, prediction, totalSessions: sessions.length, targetBand });
   } catch (error) {
     res.status(500).json({ message: 'Progress olishda xatolik', error: error.message });
   }

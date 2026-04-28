@@ -68,6 +68,11 @@ const userSchema = new mongoose.Schema({
     vocabularyCount: { type: Number, default: 0 },
     speakingCount: { type: Number, default: 0 },
   },
+  // Mock exam haftalik limit
+  mockExamUsage: {
+    weekStart: { type: Date, default: null },
+    count: { type: Number, default: 0 },
+  },
   // Email verification
 isVerified: {
   type: Boolean,
@@ -94,14 +99,21 @@ resetPasswordCodeExpires: {
     type: Date,
     default: Date.now,
   },
-  isPremium: {
-  type: Boolean,
-  default: false,
-},
-premiumExpiresAt: {
-  type: Date,
-  default: null,
-},
+  // Maqsad band score
+  targetBand: {
+    type: Number,
+    default: null,
+    min: 1,
+    max: 9,
+  },
+    isPremium: {
+    type: Boolean,
+    default: false,
+  },
+  premiumExpiresAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 userSchema.pre('save', async function (next) {

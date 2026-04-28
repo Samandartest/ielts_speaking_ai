@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
-const { generalLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
 
@@ -26,10 +25,12 @@ app.use(cors({
 
 app.use(express.json({ limit: '10kb' }));
 
-// Barcha API ga umumiy limit
-app.use('/api', generalLimiter);
+// generalLimiter YO'Q — faqat auth routelarda ishlatiladi
 
 connectDB();
+
+const { startCleanupJob } = require('./jobs/cleanupSessions');
+startCleanupJob();
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/vocabulary', require('./routes/vocabulary'));
@@ -53,9 +54,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi`);
 });
-
-const { startCleanupJob } = require('./jobs/cleanupSessions');
-
-// ...connectDB() dan keyin:
-connectDB();
-startCleanupJob();

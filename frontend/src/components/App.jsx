@@ -13,6 +13,7 @@ import TopicSelector from './Speaking/TopicSelector';
 import SpeakingSession from './Speaking/SpeakingSession';
 import AdminPanel from './Admin/AdminPanel';
 import MockExamSession from './Speaking/MockExamSession';
+import PremiumPage from './Premium/PremiumPage';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
             <Route path="/speaking/session/:topicId" element={<ProtectedRoute><SpeakingSession /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="/mock-exam" element={<ProtectedRoute><MockExamSession /></ProtectedRoute>} />
+            <Route path="/premium" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
           </Routes>
         </Router>
       </AuthProvider>

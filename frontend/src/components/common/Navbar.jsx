@@ -57,12 +57,32 @@ const Navbar = () => {
 
           {user ? (
             <>
-              <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:block">{user.name}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:block">
+                {user.name}
+              </span>
+
+              {/* 👇 PREMIUM SHU YERDA BO‘LADI */}
+              {!user?.isPremium && (
+                <Link
+                  to="/premium"
+                  className="text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-lg font-semibold hover:from-yellow-500 hover:to-orange-500 transition-all"
+                >
+                  👑 Premium
+                </Link>
+              )}
+
+              {user?.isPremium && (
+                <span className="text-sm text-yellow-500 font-bold">
+                  👑 Premium
+                </span>
+              )}
+
               {user.role === 'admin' && (
                 <Link to="/admin" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
                   {t('nav.admin')}
                 </Link>
               )}
+
               <button
                 onClick={handleLogout}
                 className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
@@ -80,6 +100,7 @@ const Navbar = () => {
               </Link>
             </>
           )}
+
         </div>
       </div>
     </nav>

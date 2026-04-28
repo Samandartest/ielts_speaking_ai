@@ -49,8 +49,6 @@ export const getMockExamHistory = () => API.get('/mock-exam/history');
 // Progress & bashorat
 export const getProgress = () => API.get('/ai/progress');
 
-// Payment
-export const getPaymentStatus = () => API.get('/payment/status');
 // Leaderboard & Limits
 export const getLeaderboard = (type) => API.get(`/leaderboard/${type}`);
 export const getMyLimits = () => API.get('/leaderboard/me/limits');
@@ -58,5 +56,19 @@ export const getMyLimits = () => API.get('/leaderboard/me/limits');
 export const verifyEmail = (data) => API.post('/auth/verify-email', data);
 export const forgotPassword = (data) => API.post('/auth/forgot-password', data);
 export const resetPassword = (data) => API.post('/auth/reset-password', data);
+
+
+// Mock exam
+export const getMockExamQuestions = () => API.get('/mock-exam/questions');
+export const cancelMockExam = (mockExamId) => API.post('/mock-exam/cancel', { mockExamId });
+
+// Target band
+export const updateTargetBand = (targetBand) => API.patch('/auth/target-band', { targetBand });
+
+// Premium status
+export const getPaymentStatus = () => API.get('/payment/status');
+
+// Admin premium
+export const setUserPremium = (userId, isPremium) => API.put(`/users/${userId}/premium`, { isPremium });
 
 export default API;

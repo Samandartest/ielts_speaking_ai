@@ -4,12 +4,14 @@ const {
   getAllUsers,
   updateUserRole,
   deleteUser,
+  setUserPremium,
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
-const { adminOnly } = require('../middleware/admin');
+const { admin } = require('../middleware/admin');
 
-router.get('/', protect, adminOnly, getAllUsers);
-router.put('/:userId/role', protect, adminOnly, updateUserRole);
-router.delete('/:userId', protect, adminOnly, deleteUser);
+router.get('/', protect, admin, getAllUsers);
+router.put('/:userId/role', protect, admin, updateUserRole);
+router.delete('/:userId', protect, admin, deleteUser);
+router.put('/:userId/premium', protect, admin, setUserPremium);
 
 module.exports = router;

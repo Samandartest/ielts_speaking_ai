@@ -44,6 +44,7 @@ const registerUser = async (req, res) => {
         isVerified: false,
         verificationCode: code,
         verificationCodeExpires: expires,
+        targetBand: req.body.targetBand || null,  // ← qo'shing
       });
     }
 
