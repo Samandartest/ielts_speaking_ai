@@ -7,11 +7,11 @@ const {
   setUserPremium,
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
-const { admin } = require('../middleware/admin');
+const { adminOnly } = require('../middleware/admin');
 
-router.get('/', protect, admin, getAllUsers);
-router.put('/:userId/role', protect, admin, updateUserRole);
-router.delete('/:userId', protect, admin, deleteUser);
-router.put('/:userId/premium', protect, admin, setUserPremium);
+router.get('/', protect, adminOnly, getAllUsers);
+router.put('/:userId/role', protect, adminOnly, updateUserRole);
+router.delete('/:userId', protect, adminOnly, deleteUser);
+router.put('/:userId/premium', protect, adminOnly, setUserPremium);
 
 module.exports = router;
