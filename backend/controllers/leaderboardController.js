@@ -69,6 +69,42 @@ const getMyLimitStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
+    // Premium muddati tekshirish
+    if (user.isPremium && user.premiumExpiresAt && user.premiumExpiresAt < new Date()) {
+      user.isPremium = false;
+      user.premiumExpiresAt = null;
+      await user.save();
+    }
+
+    const VOCAB_LIMIT = parseInt(process.env.DAILY_LIMIT_VOCAB) || 7;
+    const SPEAKING_LIMIT = parseInt(process.env.DAILY_LIMIT_SPEAKING) || 9;
+
+    // Premium user — unlimited, faqat tugash sanasini ko'rsatamiz
+    if (user.isPremium) {
+      return res.json({
+        isPremium: true,
+        premiumExpiresAt: user.premiumExpiresAt,
+        daysLeft: user.premiumExpiresAt
+          ? Math.ceil((user.premiumExpiresAt - new Date()) / (1000 * 60 * 60 * 24))
+          : null,
+        vocabulary: {
+          used: 0,
+          limit: null,
+          remaining: null,
+          unlimited: true,
+        },
+        speaking: {
+          used: 0,
+          limit: null,
+          remaining: null,
+          unlimited: true,
+        },
+        mockExam: {
+          unlimited: true,
+        },
+      });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -78,16 +114,37 @@ const getMyLimitStatus = async (req, res) => {
 
     const isToday = lastDate && lastDate >= today;
 
+    // Mock exam haftalik limit
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const lastWeekStart = user.mockExamUsage?.weekStart ? new Date(user.mockExamUsage.weekStart) : null;
+    const isSameWeek = lastWeekStart && lastWeekStart >= weekStart;
+    const mockUsedThisWeek = isSameWeek ? (user.mockExamUsage.count || 0) : 0;
+    const nextMonday = new Date(weekStart);
+    nextMonday.setDate(weekStart.getDate() + 7);
+
     res.json({
+      isPremium: false,
       vocabulary: {
         used: isToday ? user.dailyUsage.vocabularyCount : 0,
-        limit: 7,
-        remaining: isToday ? Math.max(0, 7 - user.dailyUsage.vocabularyCount) : 7,
+        limit: VOCAB_LIMIT,
+        remaining: isToday ? Math.max(0, VOCAB_LIMIT - user.dailyUsage.vocabularyCount) : VOCAB_LIMIT,
+        unlimited: false,
       },
       speaking: {
         used: isToday ? user.dailyUsage.speakingCount : 0,
-        limit: 9,
-        remaining: isToday ? Math.max(0, 9 - user.dailyUsage.speakingCount) : 9,
+        limit: SPEAKING_LIMIT,
+        remaining: isToday ? Math.max(0, SPEAKING_LIMIT - user.dailyUsage.speakingCount) : SPEAKING_LIMIT,
+        unlimited: false,
+      },
+      mockExam: {
+        usedThisWeek: mockUsedThisWeek,
+        limit: 1,
+        canTake: mockUsedThisWeek < 1,
+        resetsAt: nextMonday.toLocaleDateString('uz-UZ'),
+        unlimited: false,
       },
     });
   } catch (error) {

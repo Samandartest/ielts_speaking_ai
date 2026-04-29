@@ -107,9 +107,9 @@ const Dashboard = () => {
         {/* Tabs */}
         <div className="flex bg-white dark:bg-gray-800 rounded-xl p-1 gap-1 mb-6 shadow transition-colors">
           {[
-            { id: 'home', label: '🏠 Bosh sahifa' },
-            { id: 'progress', label: '📈 Progress' },
-            { id: 'exam', label: '🎓 Mock Exam' },
+            { id: 'home', label: t('dashboard.tabHome') },
+            { id: 'progress', label: t('dashboard.tabProgress') },
+            { id: 'exam', label: t('dashboard.tabExam') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -177,21 +177,37 @@ const Dashboard = () => {
                 <h2 className="text-base font-bold text-gray-800 dark:text-white mb-4">
                   ⚡ {t('dashboard.dailyLimit')}
                 </h2>
-                <LimitBar
-                  label={`📚 ${t('vocab.title')}`}
-                  used={limits.vocabulary.used}
-                  limit={limits.vocabulary.limit}
-                  color="bg-green-500"
-                />
-                <LimitBar
-                  label={`🎤 ${t('speaking.title')}`}
-                  used={limits.speaking.used}
-                  limit={limits.speaking.limit}
-                  color="bg-blue-500"
-                />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  🔄 {t('dashboard.resetsAt')}
-                </p>
+                {limits.isPremium ? (
+                  <div className="text-center py-4">
+                    <div className="text-3xl mb-2">👑</div>
+                    <p className="font-bold text-purple-600 dark:text-purple-400 text-lg">
+                      {t('dashboard.premiumUnlimited')}
+                    </p>
+                    {limits.premiumExpiresAt && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {t('dashboard.premiumExpires')}: {new Date(limits.premiumExpiresAt).toLocaleDateString()} ({limits.daysLeft} {t('dashboard.daysLeft')})
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <LimitBar
+                      label={`📚 ${t('vocab.title')}`}
+                      used={limits.vocabulary.used}
+                      limit={limits.vocabulary.limit}
+                      color="bg-green-500"
+                    />
+                    <LimitBar
+                      label={`🎤 ${t('speaking.title')}`}
+                      used={limits.speaking.used}
+                      limit={limits.speaking.limit}
+                      color="bg-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                      🔄 {t('dashboard.resetsAt')}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
@@ -206,7 +222,7 @@ const Dashboard = () => {
                 <p className="text-gray-600 dark:text-gray-400 text-sm">{t('dashboard.vocabDesc')}</p>
                 {!isAdmin && limits && (
                   <p className="text-xs mt-2 text-green-600 dark:text-green-400 font-medium">
-                    {limits.vocabulary.remaining}/{limits.vocabulary.limit} {t('dashboard.remaining')}
+                    {limits.isPremium ? '∞ Cheksiz' : `${limits.vocabulary.remaining}/${limits.vocabulary.limit} ${t('dashboard.remaining')}`}
                   </p>
                 )}
                 <div className="mt-3 text-green-600 dark:text-green-400 font-semibold">{t('dashboard.startBtn')}</div>
@@ -221,7 +237,7 @@ const Dashboard = () => {
                 <p className="text-gray-600 dark:text-gray-400 text-sm">{t('dashboard.speakingDesc')}</p>
                 {!isAdmin && limits && (
                   <p className="text-xs mt-2 text-blue-600 dark:text-blue-400 font-medium">
-                    {limits.speaking.remaining}/{limits.speaking.limit} {t('dashboard.remaining')}
+                    {limits.isPremium ? '∞ Cheksiz' : `${limits.speaking.remaining}/${limits.speaking.limit} ${t('dashboard.remaining')}`}
                   </p>
                 )}
                 <div className="mt-3 text-blue-600 dark:text-blue-400 font-semibold">{t('dashboard.startBtn')}</div>

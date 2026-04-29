@@ -59,7 +59,13 @@ const en = {
       noLeaderboard: 'No one has practiced yet',
       recentSessions: 'Recent sessions',
       noSessions: 'No sessions yet. Start your first one!',
+      tabHome: '🏠 Home',
+      tabProgress: '📈 Progress',
+      tabExam: '🎓 Mock Exam',
       youLabel: 'you',
+      premiumUnlimited: 'Premium — Unlimited access',
+      premiumExpires: 'Premium expires',
+      daysLeft: 'days left',
     },
     speaking: {
       title: 'Speaking Practice',

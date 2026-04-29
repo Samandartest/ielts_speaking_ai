@@ -40,11 +40,18 @@ export const deleteQuestion = (questionId) => API.delete(`/speaking/question/${q
 export const getAllUsers = () => API.get('/users');
 export const updateUserRole = (userId, role) => API.put(`/users/${userId}/role`, { role });
 export const deleteUser = (userId) => API.delete(`/users/${userId}`);
+export const setUserPremium = (userId, isPremium, months) => API.put(`/users/${userId}/premium`, { isPremium, months });
+
+// Admin - Daily Limits
+export const getAdminLimits = () => API.get('/users/config/limits');
+export const updateAdminLimits = (limits) => API.put('/users/config/limits', limits);
 
 // Mock exam
 export const startMockExam = () => API.post('/mock-exam/start');
 export const submitMockPart = (data) => API.post('/mock-exam/submit-part', data);
 export const getMockExamHistory = () => API.get('/mock-exam/history');
+export const getMockExamQuestions = () => API.get('/mock-exam/questions');
+export const cancelMockExam = (mockExamId) => API.post('/mock-exam/cancel', { mockExamId });
 
 // Progress & bashorat
 export const getProgress = () => API.get('/ai/progress');
@@ -57,18 +64,10 @@ export const verifyEmail = (data) => API.post('/auth/verify-email', data);
 export const forgotPassword = (data) => API.post('/auth/forgot-password', data);
 export const resetPassword = (data) => API.post('/auth/reset-password', data);
 
-
-// Mock exam
-export const getMockExamQuestions = () => API.get('/mock-exam/questions');
-export const cancelMockExam = (mockExamId) => API.post('/mock-exam/cancel', { mockExamId });
-
 // Target band
 export const updateTargetBand = (targetBand) => API.patch('/auth/target-band', { targetBand });
 
 // Premium status
 export const getPaymentStatus = () => API.get('/payment/status');
-
-// Admin premium
-export const setUserPremium = (userId, isPremium) => API.put(`/users/${userId}/premium`, { isPremium });
 
 export default API;

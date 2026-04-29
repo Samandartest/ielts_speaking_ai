@@ -62,7 +62,13 @@ const uz =  {
       noLeaderboard: 'Hali hech kim mashq qilmagan',
       recentSessions: "So'nggi sessiyalar",
       noSessions: 'Hali sessiya yo\'q. Birinchi sessiyangizni boshlang!',
+      tabHome: '🏠 Bosh sahifa',
+      tabProgress: '📈 Progress',
+      tabExam: '🎓 Mock Exam',
       youLabel: 'siz',
+      premiumUnlimited: 'Premium — Cheksiz imkoniyatlar',
+      premiumExpires: 'Premium tugash sanasi',
+      daysLeft: 'kun qoldi',
     },
     // Speaking
     speaking: {

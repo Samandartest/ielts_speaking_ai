@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, updateUserRole, deleteUser, setUserPremium } from '../../services/api';
+import { getAllUsers, updateUserRole, deleteUser, setUserPremium, getAdminLimits, updateAdminLimits } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const UserManagement = () => {
@@ -7,6 +7,12 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ text: '', type: '' });
   const { user: currentUser } = useAuth();
+  const [search, setSearch] = useState('');
+
+  // Limit settings
+  const [limits, setLimits] = useState({ vocabulary: 7, speaking: 9 });
+  const [limitsInput, setLimitsInput] = useState({ vocabulary: 7, speaking: 9 });
+  const [savingLimits, setSavingLimits] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -18,11 +24,19 @@ const UserManagement = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchLimits = async () => {
+    try {
+      const { data } = await getAdminLimits();
+      setLimits(data);
+      setLimitsInput(data);
+    } catch {}
+  };
 
-  const [search, setSearch] = useState('');
+  useEffect(() => {
+    fetchUsers();
+    fetchLimits();
+  }, []);
 
-  // users ni filter qilish
   const filteredUsers = users.filter(
     (u) =>
       u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -44,10 +58,10 @@ const UserManagement = () => {
     }
   };
 
-  const handlePremiumToggle = async (userId, currentPremium, userName) => {
+  const handlePremiumToggle = async (userId, currentPremium, userName, months = 1) => {
     try {
-      await setUserPremium(userId, !currentPremium);
-      showMsg(`${userName} ${!currentPremium ? 'Premium qilindi 👑' : 'Premium bekor qilindi'}`);
+      await setUserPremium(userId, !currentPremium, !currentPremium ? months : undefined);
+      showMsg(`${userName} ${!currentPremium ? `Premium qilindi (${months} oy) 👑` : 'Premium bekor qilindi'}`);
       fetchUsers();
     } catch (err) {
       showMsg(err.response?.data?.message || 'Xatolik', 'error');
@@ -63,6 +77,24 @@ const UserManagement = () => {
     } catch (err) {
       showMsg(err.response?.data?.message || 'Xatolik', 'error');
     }
+  };
+
+  const handleSaveLimits = async () => {
+    const vocab = parseInt(limitsInput.vocabulary);
+    const speaking = parseInt(limitsInput.speaking);
+    if (!vocab || vocab < 1 || vocab > 100 || !speaking || speaking < 1 || speaking > 100) {
+      showMsg('Limitlar 1-100 oraligida bolishi kerak', 'error');
+      return;
+    }
+    setSavingLimits(true);
+    try {
+      const { data } = await updateAdminLimits({ vocabulary: vocab, speaking: speaking });
+      setLimits(data.limits);
+      showMsg('Limitlar yangilandi ✓');
+    } catch {
+      showMsg('Limit saqlashda xatolik', 'error');
+    }
+    setSavingLimits(false);
   };
 
   if (loading) return (
@@ -82,6 +114,48 @@ const UserManagement = () => {
           {message.text}
         </div>
       )}
+
+      {/* Daily Limit Settings */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 mb-6 transition-colors">
+        <h3 className="font-bold text-gray-800 dark:text-white mb-3">⚙️ Kunlik Limit Sozlamalari (Free users)</h3>
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">📚 Vocabulary (kun/user)</label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={limitsInput.vocabulary}
+              onChange={(e) => setLimitsInput(p => ({ ...p, vocabulary: e.target.value }))}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-24 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">🎤 Speaking (kun/user)</label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={limitsInput.speaking}
+              onChange={(e) => setLimitsInput(p => ({ ...p, speaking: e.target.value }))}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-24 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={handleSaveLimits}
+            disabled={savingLimits}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {savingLimits ? 'Saqlanmoqda...' : '💾 Saqlash'}
+          </button>
+          <div className="text-xs text-gray-400 dark:text-gray-500">
+            Hozir: vocab={limits.vocabulary}, speaking={limits.speaking}
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+          ⚠️ Bu o'zgarishlar server qayta ishga tushmagunicha saqlanadiEXPLANATION(ishlab chiqarish uchun Config modeli tavsiya etiladi)
+        </p>
+      </div>
 
       {/* Search */}
       <div className="mb-4">
@@ -210,17 +284,30 @@ const UserManagement = () => {
                         {user.role === 'admin' ? '👤 User' : '👑 Admin'}
                       </button>
 
-                      {/* Premium toggle */}
-                      <button
-                        onClick={() => handlePremiumToggle(user._id, user.isPremium, user.name)}
-                        className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
-                          user.isPremium
-                            ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 hover:bg-purple-200'
-                            : 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 hover:bg-green-200'
-                        }`}
-                      >
-                        {user.isPremium ? '💎 Premium off' : '💎 Premium on'}
-                      </button>
+                      {/* Premium buttons */}
+                      {user.isPremium ? (
+                        <button
+                          onClick={() => handlePremiumToggle(user._id, true, user.name)}
+                          className="px-2.5 py-1 rounded text-xs font-semibold bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 hover:bg-purple-200 transition-colors"
+                        >
+                          💎 Off
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handlePremiumToggle(user._id, false, user.name, 1)}
+                            className="px-2.5 py-1 rounded text-xs font-semibold bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 hover:bg-green-200 transition-colors"
+                          >
+                            💎 1 oy
+                          </button>
+                          <button
+                            onClick={() => handlePremiumToggle(user._id, false, user.name, 3)}
+                            className="px-2.5 py-1 rounded text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 hover:bg-blue-200 transition-colors"
+                          >
+                            💎 3 oy
+                          </button>
+                        </>
+                      )}
 
                       {/* O'chirish */}
                       <button

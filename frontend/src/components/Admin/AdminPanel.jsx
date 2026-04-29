@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import UserManagement from './UserManagement';
 import TopicManagement from './TopicManagement';
+import { useTranslation } from 'react-i18next';
 
 const AdminPanel = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('users');
 
   const tabs = [
-    { id: 'users', label: '👥 Foydalanuvchilar', color: 'blue' },
-    { id: 'topics', label: '📌 Topiclar & Savollar', color: 'green' },
+    { id: 'users', label: t('admin.users'), color: 'blue' },
+    { id: 'topics', label: t('admin.topics'), color: 'green' },
   ];
 
   return (
@@ -17,7 +19,7 @@ const AdminPanel = () => {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">🛠️ Admin Panel</h1>
           <p className="text-gray-600 mt-1">
-            Foydalanuvchilar, topiclar va savollarni boshqaring
+            {t('admin.subtitle')}
           </p>
         </div>
 

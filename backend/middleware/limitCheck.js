@@ -1,9 +1,10 @@
 const User = require('../models/User');
 
-const DAILY_LIMITS = {
-  vocabulary: 7,
-  speaking: 9,
-};
+// Admin paneldan o'zgartirilishi mumkin bo'lgan limitlar
+const getDailyLimits = () => ({
+  vocabulary: parseInt(process.env.DAILY_LIMIT_VOCAB) || 7,
+  speaking: parseInt(process.env.DAILY_LIMIT_SPEAKING) || 9,
+});
 
 const getTodayStart = () => {
   const today = new Date();
@@ -15,40 +16,38 @@ const checkLimit = (type) => async (req, res, next) => {
   try {
     if (req.user.role === 'admin') return next();
 
-      // Premium user limitsiz
     const freshUser = await User.findById(req.user._id);
-    if (freshUser.isPremium) {
-      // Premium muddati tugagan bo'lsa o'chirish
-      if (freshUser.premiumExpiresAt && freshUser.premiumExpiresAt < new Date()) {
-        freshUser.isPremium = false;
-        freshUser.premiumExpiresAt = null;
-        await freshUser.save();
-      } else {
-        return next();
-      }
+
+    // Premium muddati tugaganini tekshirish
+    if (freshUser.isPremium && freshUser.premiumExpiresAt && freshUser.premiumExpiresAt < new Date()) {
+      freshUser.isPremium = false;
+      freshUser.premiumExpiresAt = null;
+      await freshUser.save();
     }
 
-    const today = getTodayStart();
-    const user = await User.findById(req.user._id);
+    // Premium user — cheksiz
+    if (freshUser.isPremium) return next();
 
-    const lastDate = user.dailyUsage?.date
-      ? new Date(user.dailyUsage.date)
+    const today = getTodayStart();
+    const lastDate = freshUser.dailyUsage?.date
+      ? new Date(freshUser.dailyUsage.date)
       : null;
 
     const isToday = lastDate && new Date(lastDate).setHours(0,0,0,0) >= today.getTime();
 
     // Yangi kun — resetlash
     if (!isToday) {
-      user.dailyUsage = {
+      freshUser.dailyUsage = {
         date: new Date(),
         vocabularyCount: 0,
         speakingCount: 0,
       };
-      await user.save();
+      await freshUser.save();
     }
 
+    const DAILY_LIMITS = getDailyLimits();
     const countField = type === 'vocabulary' ? 'vocabularyCount' : 'speakingCount';
-    const currentCount = isToday ? (user.dailyUsage[countField] || 0) : 0;
+    const currentCount = isToday ? (freshUser.dailyUsage[countField] || 0) : 0;
     const limit = DAILY_LIMITS[type];
 
     if (currentCount >= limit) {
@@ -73,6 +72,11 @@ const incrementLimit = async (userId, type) => {
     const today = getTodayStart();
     const user = await User.findById(userId);
 
+    // Premium user uchun increment qilmaymiz
+    if (user.isPremium && (!user.premiumExpiresAt || user.premiumExpiresAt > new Date())) {
+      return;
+    }
+
     const lastDate = user.dailyUsage?.date
       ? new Date(user.dailyUsage.date)
       : null;
@@ -82,19 +86,15 @@ const incrementLimit = async (userId, type) => {
     const countField = type === 'vocabulary' ? 'vocabularyCount' : 'speakingCount';
 
     if (!isToday) {
-      // Yangi kun — reset qilib, 1 dan boshlaymiz
       user.dailyUsage = {
         date: new Date(),
         vocabularyCount: type === 'vocabulary' ? 1 : 0,
         speakingCount: type === 'speaking' ? 1 : 0,
       };
     } else {
-      // Bugungi countni oshiramiz
       user.dailyUsage[countField] = (user.dailyUsage[countField] || 0) + 1;
-      user.dailyUsage.date = user.dailyUsage.date; // unchanged
     }
 
-    // markModified kerak — nested object o'zgarganda Mongoose sezmasligi mumkin
     user.markModified('dailyUsage');
     await user.save();
 
@@ -111,13 +111,17 @@ const checkMockExamLimit = async (req, res, next) => {
 
     const user = await User.findById(req.user._id);
 
-    // Premium — cheklanmaydi
-    if (user.isPremium && (!user.premiumExpiresAt || user.premiumExpiresAt > new Date())) {
-      return next();
+    // Premium muddati tugaganini tekshirish
+    if (user.isPremium && user.premiumExpiresAt && user.premiumExpiresAt < new Date()) {
+      user.isPremium = false;
+      user.premiumExpiresAt = null;
+      await user.save();
     }
 
+    // Premium — cheklanmaydi
+    if (user.isPremium) return next();
+
     const now = new Date();
-    // Haftaning boshi (dushanba)
     const weekStart = new Date(now);
     weekStart.setHours(0, 0, 0, 0);
     weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -129,7 +133,6 @@ const checkMockExamLimit = async (req, res, next) => {
     const isSameWeek = lastWeekStart && lastWeekStart >= weekStart;
 
     if (isSameWeek && user.mockExamUsage.count >= 1) {
-      // Keyingi dushanbani hisoblash
       const nextMonday = new Date(weekStart);
       nextMonday.setDate(weekStart.getDate() + 7);
 
@@ -149,6 +152,11 @@ const checkMockExamLimit = async (req, res, next) => {
 const incrementMockExamLimit = async (userId) => {
   try {
     const user = await User.findById(userId);
+
+    // Premium user uchun mock limit hisoblanmaydi
+    if (user.isPremium && (!user.premiumExpiresAt || user.premiumExpiresAt > new Date())) {
+      return;
+    }
 
     const now = new Date();
     const weekStart = new Date(now);
@@ -175,4 +183,4 @@ const incrementMockExamLimit = async (userId) => {
   }
 };
 
-module.exports = { checkLimit, incrementLimit, checkMockExamLimit, incrementMockExamLimit };
+module.exports = { checkLimit, incrementLimit, checkMockExamLimit, incrementMockExamLimit, getDailyLimits };

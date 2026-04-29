@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getMockExamHistory } from '../../services/api';
+import { getMockExamHistory, getMyLimits } from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 const BandBadge = ({ score }) => {
   const color = score >= 7 ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
@@ -14,19 +15,29 @@ const BandBadge = ({ score }) => {
 };
 
 const MockExamTab = () => {
+  const { i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [limits, setLimits] = useState(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchAll = async () => {
       try {
-        const { data } = await getMockExamHistory();
-        setHistory(data);
+        const [histRes, limitsRes] = await Promise.all([
+          getMockExamHistory(),
+          getMyLimits(),
+        ]);
+        setHistory(histRes.data);
+        setLimits(limitsRes.data);
       } catch {}
       setLoading(false);
     };
-    fetch();
+    fetchAll();
   }, []);
+
+  const mockLimit = limits?.mockExam;
+  const canTake = !mockLimit || mockLimit.unlimited || mockLimit.canTake;
 
   return (
     <div className="space-y-6">
@@ -34,24 +45,70 @@ const MockExamTab = () => {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
         <h2 className="text-xl font-bold mb-2">🎓 Mock IELTS Speaking Exam</h2>
         <p className="text-blue-100 text-sm mb-4">
-          Part 1 → Part 2 → Part 3 to'liq simulyatsiya. Oxirida real Band score chiqadi.
+          {lang === 'ru'
+            ? 'Полная симуляция: Part 1 → Part 2 → Part 3. В конце реальный Band Score.'
+            : lang === 'en'
+            ? 'Full simulation: Part 1 → Part 2 → Part 3. Real Band Score at the end.'
+            : "Part 1 → Part 2 → Part 3 to'liq simulyatsiya. Oxirida real Band score chiqadi."}
         </p>
         <div className="flex gap-3 text-xs text-blue-200 mb-4">
-          <span>⏱ ~15 daqiqa</span>
-          <span>🎤 Barcha 3 qism</span>
+          <span>⏱ ~15 {lang === 'ru' ? 'минут' : lang === 'en' ? 'minutes' : 'daqiqa'}</span>
+          <span>🎤 {lang === 'ru' ? 'Все 3 части' : lang === 'en' ? 'All 3 parts' : 'Barcha 3 qism'}</span>
           <span>📊 IELTS band score</span>
         </div>
-        <Link
-          to="/mock-exam"
-          className="inline-block bg-white text-blue-600 font-bold px-6 py-2.5 rounded-lg hover:bg-blue-50 transition-colors"
-        >
-          Boshlash →
-        </Link>
+
+        {/* Haftalik limit holati */}
+        {!loading && mockLimit && !mockLimit.unlimited && (
+          <div className={`rounded-lg px-4 py-2 mb-4 text-sm font-medium ${canTake ? 'bg-white/20' : 'bg-red-500/30'}`}>
+            {canTake ? (
+              <span>
+                ✅ {lang === 'ru' ? 'Доступно на эту неделю' : lang === 'en' ? 'Available this week' : 'Bu hafta uchun mavjud'}
+              </span>
+            ) : (
+              <span>
+                ⏳ {lang === 'ru'
+                  ? `Недельный лимит исчерпан. Сброс: ${mockLimit.resetsAt}`
+                  : lang === 'en'
+                  ? `Weekly limit reached. Resets: ${mockLimit.resetsAt}`
+                  : `Bu hafta uchun mock exam tugadi. Yangilanadi: ${mockLimit.resetsAt}`}
+              </span>
+            )}
+          </div>
+        )}
+
+        {!loading && mockLimit?.unlimited && (
+          <div className="bg-white/20 rounded-lg px-4 py-2 mb-4 text-sm font-medium">
+            👑 {lang === 'ru' ? 'Безлимитно (Premium)' : lang === 'en' ? 'Unlimited (Premium)' : 'Cheksiz (Premium)'}
+          </div>
+        )}
+
+        {canTake ? (
+          <Link
+            to="/mock-exam"
+            className="inline-block bg-white text-blue-600 font-bold px-6 py-2.5 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            {lang === 'ru' ? 'Начать →' : lang === 'en' ? 'Start →' : 'Boshlash →'}
+          </Link>
+        ) : (
+          <div className="flex gap-3 flex-wrap">
+            <span className="inline-block bg-white/30 text-white font-bold px-6 py-2.5 rounded-lg cursor-not-allowed opacity-70">
+              {lang === 'ru' ? 'Недоступно' : lang === 'en' ? 'Unavailable' : 'Mavjud emas'}
+            </span>
+            <Link
+              to="/premium"
+              className="inline-block bg-yellow-400 text-gray-800 font-bold px-6 py-2.5 rounded-lg hover:bg-yellow-300 transition-colors"
+            >
+              👑 Premium
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Tarix */}
       <div>
-        <h3 className="font-bold text-gray-800 dark:text-white mb-3">📋 Oldingi imtihonlar</h3>
+        <h3 className="font-bold text-gray-800 dark:text-white mb-3">
+          📋 {lang === 'ru' ? 'Предыдущие экзамены' : lang === 'en' ? 'Previous exams' : 'Oldingi imtihonlar'}
+        </h3>
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -59,7 +116,7 @@ const MockExamTab = () => {
         ) : history.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center text-gray-400 dark:text-gray-500 transition-colors">
             <div className="text-4xl mb-2">📝</div>
-            <p>Hali mock exam yo'q. Birinchisini boshlang!</p>
+            <p>{lang === 'ru' ? 'Экзаменов пока нет. Начните первый!' : lang === 'en' ? 'No exams yet. Start your first one!' : "Hali mock exam yo'q. Birinchisini boshlang!"}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -71,7 +128,7 @@ const MockExamTab = () => {
                       Mock Exam #{exam._id.slice(-4).toUpperCase()}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {new Date(exam.completedAt).toLocaleDateString()} · {exam.parts.length} qism · +{exam.xpEarned} XP
+                      {new Date(exam.completedAt).toLocaleDateString()} · {exam.parts.length} {lang === 'ru' ? 'части' : lang === 'en' ? 'parts' : 'qism'} · +{exam.xpEarned} XP
                     </p>
                     <div className="flex gap-2 mt-2">
                       {exam.parts.map((p) => (

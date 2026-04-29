@@ -59,7 +59,13 @@ const ru = {
       noLeaderboard: 'Пока никто не практиковался',
       recentSessions: 'Последние сессии',
       noSessions: 'Сессий ещё нет. Начните первую!',
+      tabHome: '🏠 Главная',
+      tabProgress: '📈 Прогресс',
+      tabExam: '🎓 Mock Exam',
       youLabel: 'вы',
+      premiumUnlimited: 'Premium — Безлимитный доступ',
+      premiumExpires: 'Premium истекает',
+      daysLeft: 'дней осталось',
     },
     speaking: {
       title: 'Speaking Practice',

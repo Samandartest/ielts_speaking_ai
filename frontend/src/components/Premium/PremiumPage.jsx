@@ -62,14 +62,11 @@ const PremiumPage = () => {
   }, []);
 
   const handleTelegram = () => {
-    const plan = PLANS.find((p) => p.id === selectedPlan);
-    const planName = plan?.name[lang] || plan?.name.uz;
-    const price = plan?.price;
     window.open(TELEGRAM_LINK, '_blank');
   };
 
-  const copyUserId = () => {
-    navigator.clipboard.writeText(user?._id || '');
+  const copyEmail = () => {
+    navigator.clipboard.writeText(user?.email || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -201,7 +198,7 @@ const PremiumPage = () => {
             </p>
             {[
               { uz: '1. Telegram tugmasini bosing', ru: '1. Нажмите кнопку Telegram', en: '1. Click the Telegram button' },
-              { uz: '2. Tanlangan rejangizni va ID ingizni yuboring', ru: '2. Укажите выбранный тариф и ваш ID', en: '2. Send your selected plan and user ID' },
+              { uz: '2. Tanlangan rejangizni va emailingizni yuboring', ru: '2. Укажите выбранный тариф и ваш Email', en: '2. Send your selected plan and email' },
               { uz: '3. To\'lovni amalga oshiring', ru: '3. Произведите оплату', en: '3. Complete the payment' },
               { uz: '4. Admin 24 soat ichida Premium beradi', ru: '4. Админ активирует Premium в течение 24ч', en: '4. Admin activates Premium within 24h' },
             ].map((step, i) => (
@@ -212,14 +209,14 @@ const PremiumPage = () => {
           {/* User ID */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-5">
             <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-2">
-              {lang === 'ru' ? 'Ваш User ID (отправьте администратору):' : lang === 'en' ? 'Your User ID (send to admin):' : 'Sizning User ID (adminga yuboring):'}
+              {lang === 'ru' ? 'Ваш Email (отправьте администратору):' : lang === 'en' ? 'Your Email (send to admin):' : 'Sizning Email (adminga yuboring):'}
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-700 font-mono break-all">
-                {user?._id}
+                {user?.email}
               </code>
               <button
-                onClick={copyUserId}
+                onClick={copyEmail}
                 className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                   copied
                     ? 'bg-green-500 text-white'

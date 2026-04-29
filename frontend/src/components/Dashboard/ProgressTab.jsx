@@ -10,7 +10,7 @@ const TrendIcon = ({ trend }) => {
 };
 
 const ProgressTab = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [targetBand, setTargetBand] = useState(6.5);
@@ -61,12 +61,12 @@ const ProgressTab = () => {
       {/* Maqsad band */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 transition-colors">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-gray-800 dark:text-white">🎯 Maqsad Band Score</h3>
+          <h3 className="font-bold text-gray-800 dark:text-white">{t('progress.goalTitle')}</h3>
           <button
             onClick={() => setEditingGoal(!editingGoal)}
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
-            {editingGoal ? 'Bekor qilish' : 'O\'zgartirish'}
+            {editingGoal ? t('progress.cancel') : t('progress.change')}
           </button>
         </div>
 
@@ -276,7 +276,7 @@ const ProgressTab = () => {
       ) : (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           <div className="text-4xl mb-3">📈</div>
-          <p>Grafik uchun kamida 3 ta sessiya kerak.</p>
+          <p>{t('progress.needMore')}</p>
           <p className="text-sm mt-1">Maqsadingiz yuqorida saqlandi.</p>
         </div>
       )}
