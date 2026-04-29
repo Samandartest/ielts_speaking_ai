@@ -23,9 +23,14 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const loginUser = (userData) => {
+  const loginUser = async (userData) => {
     localStorage.setItem('token', userData.token);
     setUser(userData);
+    // Profile dan to'liq ma'lumot olish (targetBand ham)
+    try {
+      const { data } = await getProfile();
+      setUser(data);
+    } catch {}
   };
 
   const logoutUser = () => {

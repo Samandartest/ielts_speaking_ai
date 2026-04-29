@@ -203,7 +203,7 @@ const resetPassword = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('-password')
+      .select('-password -verificationCode -verificationCodeExpires -resetPasswordCode -resetPasswordCodeExpires')
       .populate('completedTopics', '_id');
     res.json(user);
   } catch (error) {

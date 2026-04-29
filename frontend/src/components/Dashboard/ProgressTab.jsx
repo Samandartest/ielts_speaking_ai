@@ -19,16 +19,19 @@ const ProgressTab = () => {
   const lang = i18n.language || 'uz';
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: res } = await getProgress();
-        setData(res);
-        if (res.targetBand) setTargetBand(res.targetBand);
-      } catch {}
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+  const fetchData = async () => {
+    try {
+      const { data: res } = await getProgress();
+      setData(res);
+      // Faqat DB dan kelgan qiymat bo'lsa set qilish
+      if (res.targetBand !== null && res.targetBand !== undefined) {
+        setTargetBand(res.targetBand);
+      }
+    } catch {}
+    setLoading(false);
+  };
+  fetchData();
+}, []);
 
   const handleSaveGoal = async (band) => {
     setSavingGoal(true);
@@ -36,11 +39,12 @@ const ProgressTab = () => {
       await updateTargetBand(band);
       setTargetBand(band);
       setEditingGoal(false);
-      // Progressni qayta yuklaymiz — yangi targetBand bilan
+      // Progress qayta yukla
       const { data: res } = await getProgress();
       setData(res);
+      if (res.targetBand) setTargetBand(res.targetBand);
     } catch (err) {
-      console.error('Target band saqlashda xatolik:', err);
+      console.error('Target band xatosi:', err);
     }
     setSavingGoal(false);
   };

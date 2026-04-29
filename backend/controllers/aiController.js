@@ -143,8 +143,12 @@ const getProgress = async (req, res) => {
       .sort({ createdAt: 1 })
       .populate('topic', 'name');
 
+    // targetBand ni DB dan to'g'ridan-to'g'ri olish
+    const userData = await User.findById(req.user._id).select('targetBand');
+    const targetBand = userData?.targetBand || null;
+
     if (sessions.length === 0) {
-      return res.json({ sessions: [], prediction: null });
+      return res.json({ sessions: [], prediction: null, totalSessions: 0, targetBand });
     }
 
     // Haftalik guruhlash
@@ -169,8 +173,6 @@ const getProgress = async (req, res) => {
     const prediction = calculatePrediction(sessions);
 
     // User targetBand ini olish
-    const userData = await User.findById(req.user._id).select('targetBand');
-    const targetBand = userData?.targetBand || 6.5;
 
     res.json({ sessions: weekly, prediction, totalSessions: sessions.length, targetBand });
   } catch (error) {

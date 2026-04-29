@@ -20,6 +20,15 @@ const UserManagement = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  const [search, setSearch] = useState('');
+
+  // users ni filter qilish
+  const filteredUsers = users.filter(
+    (u) =>
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      u.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   const showMsg = (text, type = 'success') => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: '', type: '' }), 3000);
@@ -74,6 +83,22 @@ const UserManagement = () => {
         </div>
       )}
 
+      {/* Search */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Email yoki ism bo'yicha qidirish..."
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+        />
+        {search && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {filteredUsers.length} ta natija topildi
+          </p>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-center">
@@ -113,7 +138,7 @@ const UserManagement = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {users.map((user, index) => (
+            {filteredUsers.map((user, index) => (
               <tr
                 key={user._id}
                 className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
