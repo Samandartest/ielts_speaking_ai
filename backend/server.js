@@ -54,3 +54,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi`);
 });
+
+app.use('/api', require('./routes'));
+const cors = require('cors');
+app.use(cors({
+  origin: "https://speakingai.me"
+}));
